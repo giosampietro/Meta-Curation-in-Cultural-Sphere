@@ -33,6 +33,8 @@ Current local package availability:
 
 There is no `requirements.txt`, so dependencies are not documented in a machine-installable way.
 
+Update: Phase 2 added `requirements.txt` for baseline scraper dependencies and `requirements-pixplot.txt` for optional PixPlot installation.
+
 ## Script-By-Script Notes
 
 ### Met Scraper
@@ -102,13 +104,10 @@ Why:
 
 The repo currently lacks:
 
-- Dependency file
-- API key template
-- Unified collection command
 - Output schema validator
-- PixPlot runner
 - Interactive review interface
-- Tests
+
+Update: Phase 2 added a dependency file, API key template, Met-only collection command, PixPlot runner, review generator, and tests. The interactive review interface is still only a generated HTML page, not a full app.
 
 ## First Safe Run
 
@@ -140,3 +139,21 @@ The browser review page is:
 - `data/samples/met-cloud-test/review.html`
 
 Important lesson: in this script, `--max` limits object records, not total image files. The browser version should make that distinction clear before running a collection.
+
+## PixPlot Readiness
+
+PixPlot is not installed locally. The bridge script can still prepare metadata and print the exact command.
+
+Current bridge:
+
+```bash
+python3 scripts/run_pixplot.py --collection data/samples/met-cloud-test
+```
+
+Optional install path:
+
+```bash
+python3 -m pip install -r requirements-pixplot.txt
+```
+
+This should be treated carefully because PixPlot depends on a large machine-learning stack.
