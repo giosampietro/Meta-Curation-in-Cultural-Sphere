@@ -1,0 +1,18 @@
+# Local/generated collection outputs
+data/samples/
+
+# Browser verification artifacts
+.playwright-cli/
+
+# macOS local folder metadata
+.DS_Store
+
+# Python runtime artifacts
+__pycache__/
+*.pyc
+
+# Local secrets
+.env
+config/*.json
+config/*.yaml
+config/*.yml
