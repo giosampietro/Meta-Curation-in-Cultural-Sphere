@@ -40,6 +40,10 @@ The cultural heart is strong. The software is not yet a complete app.
 - Confirmed the Python files are syntactically valid Python.
 - Ran a small Met API sample for the search term `cloud`.
 - Created a simple browser review page for the sample output.
+- Started Phase 2 on branch `phase-2-runnable-met-pixplot`.
+- Added a tested Met-only runner that wraps the original Met scraper.
+- Added a tested review/metadata generator.
+- Added a PixPlot bridge that prepares metadata and prints or runs the PixPlot command.
 
 ## Important Findings
 
@@ -53,6 +57,7 @@ The cultural heart is strong. The software is not yet a complete app.
 - `editorial-workflow-README.md` appears to end mid-thought.
 - The first Met sample found 278 object records, processed 2 object records, downloaded 8 image files, and produced 2 metadata files.
 - A `--max 2` Met run does not mean "download exactly 2 images." It means "process 2 object records," and each object may include additional images.
+- PixPlot is not installed locally. Current PixPlot installation is heavy and should be done deliberately in a separate environment where possible.
 
 ## Working Rule
 
@@ -72,4 +77,20 @@ The first evolution path is:
 - `docs/dependency-and-runnability-audit.md`
 - `docs/nontechnical-project-map.md`
 - `docs/met-sample-run-report.md`
+- `docs/phase-2-runnable-workflow.md`
+- `docs/pixplot-integration-notes.md`
 - `data/samples/met-cloud-test/review.html`
+
+## Current Runnable Commands
+
+Small Met collection:
+
+```bash
+python3 scripts/collect_images.py --keyword cloud --limit 2 --output data/samples/met-cloud-test
+```
+
+PixPlot preparation dry run:
+
+```bash
+python3 scripts/run_pixplot.py --collection data/samples/met-cloud-test
+```

@@ -1,5 +1,6 @@
 # Local/generated collection outputs
 data/samples/
+data/pixplot/
 
 # Browser verification artifacts
 .playwright-cli/
@@ -13,6 +14,11 @@ __pycache__/
 
 # Local secrets
 .env
-config/*.json
-config/*.yaml
-config/*.yml
+config/api_keys.json
+config/api_config.yaml
+config/api_config.yml
+
+# Keep safe templates tracked
+!config/*.example.json
+!config/*.example.yaml
+!config/*.example.yml

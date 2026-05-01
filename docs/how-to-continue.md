@@ -11,6 +11,8 @@ Read these files in this order:
 3. `docs/dependency-and-runnability-audit.md`
 4. `docs/met-sample-run-report.md`
 5. `docs/nontechnical-project-map.md`
+6. `docs/phase-2-runnable-workflow.md`
+7. `docs/pixplot-integration-notes.md`
 
 That sequence explains the project before touching code.
 
@@ -47,10 +49,10 @@ Phase 2 should make the original project minimally runnable and clearer without 
 
 Recommended next repairs:
 
-1. Add a real `requirements.txt`.
-2. Add a safe API key template.
-3. Add a tiny unified runner for the Met scraper only.
-4. Add a small browser review generator so every sample run creates an inspectable page.
+1. Confirm the Phase 2 runner works on the local machine.
+2. Decide whether to install PixPlot locally or defer heavy clustering to a separate environment.
+3. Add manual-mixing support so subjective images can be included before PixPlot.
+4. Add a fuller browser interface after the command-line wrapper is reliable.
 5. Document each repair in `PROJECT_MEMORY.md`.
 
 ## Future Product Direction

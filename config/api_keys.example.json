@@ -1,0 +1,6 @@
+{
+  "europeana": "YOUR_EUROPEANA_API_KEY",
+  "harvard_art_museums": "YOUR_HARVARD_API_KEY",
+  "smithsonian": "YOUR_SMITHSONIAN_API_KEY",
+  "cooper_hewitt": "YOUR_COOPER_HEWITT_API_KEY"
+}
