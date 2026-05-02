@@ -159,14 +159,17 @@ class OpenSourceConnector:
         return response.json()
 
     def search(self, search_term: str, theme_layer: str, limit: int) -> List[SourceImage]:
-        if self.source == "met":
-            return self._search_met(search_term, theme_layer, limit)
-        if self.source == "vam":
-            return self._search_vam(search_term, theme_layer, limit)
-        if self.source == "aic":
-            return self._search_aic(search_term, theme_layer, limit)
-        if self.source == "cma":
-            return self._search_cma(search_term, theme_layer, limit)
+        try:
+            if self.source == "met":
+                return self._search_met(search_term, theme_layer, limit)
+            if self.source == "vam":
+                return self._search_vam(search_term, theme_layer, limit)
+            if self.source == "aic":
+                return self._search_aic(search_term, theme_layer, limit)
+            if self.source == "cma":
+                return self._search_cma(search_term, theme_layer, limit)
+        except RequestException:
+            return []
         raise ValueError(f"Unsupported source: {self.source}")
 
     def count(self, search_term: str, theme_layer: str = "core") -> int:

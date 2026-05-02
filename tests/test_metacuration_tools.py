@@ -387,6 +387,19 @@ class MetacurationToolsTest(unittest.TestCase):
 
         self.assertEqual(["1", "3"], [record.source_record_id for record in records])
 
+    def test_connector_search_skips_failed_source_term(self):
+        connector = OpenSourceConnector("met", polite_delay=0)
+
+        def fake_get_json(_url, params=None):
+            del params
+            raise HTTPError("403 Client Error: Forbidden")
+
+        object.__setattr__(connector, "get_json", fake_get_json)
+
+        records = connector.search("snakes", "core", 3)
+
+        self.assertEqual([], records)
+
     def test_balanced_selection_round_robins_sources(self):
         records = [
             SourceImage(source="met", source_record_id=f"m{i}", image_url=f"https://example.org/m{i}.jpg")
