@@ -257,10 +257,14 @@ class MetacurationToolsTest(unittest.TestCase):
 
             index = (atlas / "index.html").read_text(encoding="utf-8")
             script = (assets / "metacuration-toggles.js").read_text(encoding="utf-8")
+            highres = (assets / "metacuration-highres.js").read_text(encoding="utf-8")
             self.assertIn("metacuration-toggles.js", index)
+            self.assertIn("metacuration-highres.js", index)
             self.assertIn("theme_layer", script)
             self.assertIn("source", script)
             self.assertIn("resetGroupIfEmpty", script)
+            self.assertIn("/data/samples/atlas/images", highres)
+            self.assertIn("MutationObserver", highres)
 
     def test_connectors_normalize_open_source_records(self):
         met_images = met_object_to_source_images(

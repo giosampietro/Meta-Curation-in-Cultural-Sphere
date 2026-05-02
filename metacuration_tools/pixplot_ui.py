@@ -128,19 +128,88 @@ TOGGLE_SCRIPT = r"""(() => {
 """
 
 
+HIGH_RES_SCRIPT = r"""(() => {
+  const SOURCE_COLLECTION = "__SOURCE_COLLECTION__";
+
+  function filenameFromPixplotSrc(src) {
+    const match = String(src || "").match(/\/originals\/([^?#]+)/);
+    return match ? decodeURIComponent(match[1]) : "";
+  }
+
+  function upgradeSelectedImage() {
+    const image = document.querySelector("#selected-image");
+    if (!image || image.dataset.metacurationHighres === "true") return;
+    const filename = filenameFromPixplotSrc(image.getAttribute("src"));
+    if (!filename) return;
+    const highres = `${SOURCE_COLLECTION}/${encodeURIComponent(filename)}`;
+    image.dataset.metacurationHighres = "true";
+    image.dataset.pixplotSrc = image.getAttribute("src");
+    image.decoding = "async";
+    image.loading = "eager";
+    image.src = highres;
+    document.querySelector("#download-icon")?.setAttribute("href", highres);
+  }
+
+  function injectStyles() {
+    const style = document.createElement("style");
+    style.textContent = `
+      #selected-image {
+        image-rendering: auto;
+      }
+      #selected-image-container::after {
+        content: "High-res image loaded on open";
+        position: absolute;
+        right: 14px;
+        bottom: 14px;
+        padding: 5px 7px;
+        color: rgba(255, 255, 255, 0.86);
+        background: rgba(0, 0, 0, 0.52);
+        font: 11px/1.2 Open Sans, system-ui, sans-serif;
+        pointer-events: none;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  injectStyles();
+  new MutationObserver(upgradeSelectedImage).observe(document.body, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ["src"],
+  });
+})();
+"""
+
+
 def patch_pixplot_toggles(atlas_dir: Path) -> None:
     atlas_dir = Path(atlas_dir)
     index_path = atlas_dir / "index.html"
     assets_dir = atlas_dir / "assets" / "js"
     script_path = assets_dir / "metacuration-toggles.js"
+    high_res_path = assets_dir / "metacuration-highres.js"
     assets_dir.mkdir(parents=True, exist_ok=True)
     script_path.write_text(TOGGLE_SCRIPT, encoding="utf-8")
+    source_collection = f"/data/samples/{atlas_dir.name}/images"
+    high_res_path.write_text(
+        HIGH_RES_SCRIPT.replace("__SOURCE_COLLECTION__", source_collection),
+        encoding="utf-8",
+    )
 
     index = index_path.read_text(encoding="utf-8")
-    tag = "    <script src='assets/js/metacuration-toggles.js'></script>"
-    if "metacuration-toggles.js" not in index:
+    tags = [
+        "    <script src='assets/js/metacuration-toggles.js'></script>",
+        "    <script src='assets/js/metacuration-highres.js'></script>",
+    ]
+    changed = False
+    for tag in tags:
+        script_name = tag.split("assets/js/", 1)[1].split(".js", 1)[0] + ".js"
+        if script_name in index:
+            continue
         if "</body>" in index:
             index = index.replace("</body>", f"{tag}\n  </body>")
         else:
             index = f"{index}\n{tag}\n"
+        changed = True
+    if changed:
         index_path.write_text(index, encoding="utf-8")

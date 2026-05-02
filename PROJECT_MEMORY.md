@@ -102,6 +102,8 @@ The generated PixPlot metadata includes `source`, `theme_layer`, `search_term`, 
 
 The 5k serpent PixPlot atlas completed successfully through Docker. PixPlot processed 5,306 images after skipping one oblong image. Source/layer toggle patching was applied to the generated atlas.
 
+The atlas now includes a high-resolution modal patch. The WebGL map still uses PixPlot atlas textures for speed, but opened/inspected images lazy-load larger source files from `data/samples/serpents-open-5k/images` instead of PixPlot's smaller `data/originals` copies.
+
 Current serpent atlas preview URL:
 
 ```text

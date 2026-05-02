@@ -115,6 +115,19 @@ http://127.0.0.1:8771/data/pixplot/met-cloud-200/
 
 This matters because PixPlot writes project-relative paths in `data/manifest.json`. The preview server also sends `content-length` headers; without them, PixPlot's older loading screen can show `NaN%` and refuse to enter the map.
 
+## Image Quality and Lazy Loading
+
+PixPlot renders the zoomable map from atlas textures. Those are intentionally small so thousands of images can move smoothly in WebGL. Deep zoom can therefore look pixelated.
+
+The project patch now improves the inspection modal instead of forcing every map tile to become high-resolution:
+
+- PixPlot's own `data/originals` copies are often resized to about 600px tall.
+- The collected source images in `data/samples/<collection>/images` are often larger.
+- `assets/js/metacuration-highres.js` lazy-loads the larger source image only when an image is opened in the modal.
+- This keeps the 5k map responsive while making clicked images clearer.
+
+For sharper images directly inside the map, regenerate PixPlot with a larger `--cell-size`, for example `64`. That creates heavier atlas textures and may cost more memory/GPU performance. Use this only if map-level sharpness matters more than speed.
+
 ## Current Verification
 
 Verified on May 2, 2026:
@@ -123,5 +136,6 @@ Verified on May 2, 2026:
 - The browser preview opens to the WebGL map.
 - The atlas loads with no browser console errors in the local preview.
 - The map starts in UMAP layout with PixPlot's standard interactions.
+- The serpent atlas modal lazy-loads higher-resolution images from `data/samples/serpents-open-5k/images`.
 
 Docker note: the first one-off Docker run completed the atlas. Afterward Docker Desktop's command socket became slow/unresponsive for new `docker build` status calls, so the reusable Docker image is documented and ready but not yet confirmed as built locally.
