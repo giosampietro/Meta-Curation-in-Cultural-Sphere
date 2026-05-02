@@ -63,6 +63,7 @@ The cultural heart is strong. The software is not yet a complete app.
 - PixPlot is not installed directly on the computer. It now runs through the local Docker image `metacuration-pixplot:local`.
 - Docker Desktop was repaired on May 2, 2026 by force-stopping a wedged `com.docker.backend` process and reopening Docker Desktop. The health check is `curl --unix-socket /Users/giorgio/.docker/run/docker.sock http://localhost/_ping`, which should return `OK`.
 - The reusable PixPlot Docker image was built successfully from `docker/pixplot.Dockerfile`.
+- Project startup instructions now live in `AGENTS.md`, with a human-readable companion note at `docs/project-startup-notes.md`.
 
 ## Current Working Sample
 
@@ -127,6 +128,8 @@ The first evolution path is:
 - `docs/met-sample-run-report.md`
 - `docs/phase-2-runnable-workflow.md`
 - `docs/pixplot-integration-notes.md`
+- `docs/project-startup-notes.md`
+- `AGENTS.md`
 - `data/samples/met-cloud-test/review.html`
 - `scripts/serve_pixplot.mjs`
 - `docker/pixplot.Dockerfile`
