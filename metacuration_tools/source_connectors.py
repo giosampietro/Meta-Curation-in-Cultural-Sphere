@@ -8,6 +8,7 @@ from typing import Iterable, List
 from urllib.parse import quote
 
 import requests
+from requests import RequestException
 
 from .sources import SourceImage
 
@@ -218,9 +219,12 @@ class OpenSourceConnector:
         object_ids = (data.get("objectIDs") or [])[:limit]
         records: List[SourceImage] = []
         for object_id in object_ids:
-            metadata = self.get_json(
-                f"https://collectionapi.metmuseum.org/public/collection/v1/objects/{object_id}"
-            )
+            try:
+                metadata = self.get_json(
+                    f"https://collectionapi.metmuseum.org/public/collection/v1/objects/{object_id}"
+                )
+            except RequestException:
+                continue
             records.extend(met_object_to_source_images(metadata, search_term, theme_layer))
             if len(records) >= limit:
                 break

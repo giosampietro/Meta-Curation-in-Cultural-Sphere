@@ -3,6 +3,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from requests import HTTPError
 
 from metacuration_tools.collect_met import build_met_scraper_command
 from metacuration_tools.catalog import SerpentCatalog
@@ -363,6 +364,28 @@ class MetacurationToolsTest(unittest.TestCase):
 
         self.assertEqual(150, len(records))
         self.assertEqual(2, len(calls))
+
+    def test_met_connector_skips_forbidden_object_detail_records(self):
+        connector = OpenSourceConnector("met", polite_delay=0)
+
+        def fake_get_json(url, params=None):
+            if params:
+                return {"objectIDs": [1, 2, 3], "total": 3}
+            if url.endswith("/2"):
+                raise HTTPError("403 Client Error: Forbidden")
+            object_id = url.rsplit("/", 1)[-1]
+            return {
+                "objectID": object_id,
+                "title": f"Snake {object_id}",
+                "primaryImage": f"https://example.org/{object_id}.jpg",
+                "isPublicDomain": True,
+            }
+
+        object.__setattr__(connector, "get_json", fake_get_json)
+
+        records = connector.search("snake", "core", 3)
+
+        self.assertEqual(["1", "3"], [record.source_record_id for record in records])
 
     def test_balanced_selection_round_robins_sources(self):
         records = [
