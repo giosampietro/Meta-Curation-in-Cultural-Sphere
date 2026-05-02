@@ -60,8 +60,9 @@ The cultural heart is strong. The software is not yet a complete app.
 - `editorial-workflow-README.md` appears to end mid-thought.
 - The first Met sample found 278 object records, processed 2 object records, downloaded 8 image files, and produced 2 metadata files.
 - A `--max 2` Met run does not mean "download exactly 2 images." It means "process 2 object records," and each object may include additional images.
-- PixPlot is not installed directly on the computer. It has been run through Docker once, and the repo now has a Dockerfile for future isolated runs.
-- Docker generated the first full PixPlot atlas, but Docker Desktop's command socket became slow/unresponsive afterward when trying to build the reusable image. The Dockerfile is ready; the image build still needs a clean Docker retry.
+- PixPlot is not installed directly on the computer. It now runs through the local Docker image `metacuration-pixplot:local`.
+- Docker Desktop was repaired on May 2, 2026 by force-stopping a wedged `com.docker.backend` process and reopening Docker Desktop. The health check is `curl --unix-socket /Users/giorgio/.docker/run/docker.sock http://localhost/_ping`, which should return `OK`.
+- The reusable PixPlot Docker image was built successfully from `docker/pixplot.Dockerfile`.
 
 ## Current Working Sample
 
@@ -93,10 +94,18 @@ Current verified runs:
 
 - `data/samples/serpents-open-two-layer-small`: 40 images, core + expanded layers
 - `data/samples/serpents-open-core-300`: 300 images, core layer, about 204 MB
+- `data/samples/serpents-open-5k`: 5,307 downloaded image files, about 1.4 GB
+- `data/pixplot/serpents-open-5k`: generated PixPlot atlas, about 376 MB
 
 The generated PixPlot metadata includes `source`, `theme_layer`, `search_term`, and `rights`.
 
-PixPlot toggle patching is implemented in code, but the 300-image PixPlot atlas has not been executed yet because Docker Desktop's command socket is currently hanging. The dry-run PixPlot command is ready in `docs/serpent-atlas-workflow.md`.
+The 5k serpent PixPlot atlas completed successfully through Docker. PixPlot processed 5,306 images after skipping one oblong image. Source/layer toggle patching was applied to the generated atlas.
+
+Current serpent atlas preview URL:
+
+```text
+http://127.0.0.1:8771/data/pixplot/serpents-open-5k/
+```
 
 ## Working Rule
 
@@ -148,4 +157,16 @@ Then open:
 
 ```text
 http://127.0.0.1:8771/data/pixplot/met-cloud-200/
+```
+
+Run the 5k serpent PixPlot atlas through Docker:
+
+```bash
+docker run --rm -v "/Users/giorgio/Library/CloudStorage/GoogleDrive-gio@giosampietro.xyz/My Drive/01_Projects/Codex/ImageResearch/Meta-Curation-in-Cultural-Sphere:/work" -w /work metacuration-pixplot:local python scripts/run_pixplot.py --collection data/samples/serpents-open-5k --out-dir data/pixplot/serpents-open-5k --max-images 5000 --execute
+```
+
+Preview the serpent atlas:
+
+```text
+http://127.0.0.1:8771/data/pixplot/serpents-open-5k/
 ```
