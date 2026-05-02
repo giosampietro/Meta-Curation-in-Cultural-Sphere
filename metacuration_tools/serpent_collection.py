@@ -142,6 +142,7 @@ def main(argv: List[str] | None = None) -> int:
     parser.add_argument("--expanded-limit-per-term", type=int, default=0)
     parser.add_argument("--target-images", type=int, default=100)
     parser.add_argument("--download-workers", type=int, default=1)
+    parser.add_argument("--resume-downloads", action="store_true")
     parser.add_argument("--count-only", action="store_true")
     args = parser.parse_args(argv)
 
@@ -159,13 +160,15 @@ def main(argv: List[str] | None = None) -> int:
         print(f"Count report: {report}")
         return 0
 
-    records = collect_terms(
-        sources=sources,
-        core_terms=core_terms,
-        expanded_terms=expanded_terms,
-        core_limit_per_term=args.core_limit_per_term,
-        expanded_limit_per_term=args.expanded_limit_per_term,
-    )
+    records = []
+    if not args.resume_downloads:
+        records = collect_terms(
+            sources=sources,
+            core_terms=core_terms,
+            expanded_terms=expanded_terms,
+            core_limit_per_term=args.core_limit_per_term,
+            expanded_limit_per_term=args.expanded_limit_per_term,
+        )
     result = build_collection(output_dir, records, args.target_images, download_workers=max(1, args.download_workers))
     for key, value in result.items():
         print(f"{key}: {value}")
