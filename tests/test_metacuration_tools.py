@@ -223,6 +223,26 @@ class MetacurationToolsTest(unittest.TestCase):
             self.assertEqual("core", rows[0]["theme_layer"])
             self.assertEqual("snake", rows[0]["search_term"])
 
+    def test_pixplot_metadata_uses_exact_metadata_filename(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            collection = Path(tmp) / "prefix-test"
+            images = collection / "images"
+            metadata = collection / "metadata"
+            images.mkdir(parents=True)
+            metadata.mkdir(parents=True)
+            (images / "1.jpg").write_bytes(b"one")
+            (images / "10.jpg").write_bytes(b"ten")
+            (metadata / "1.json").write_text(
+                json.dumps({"objectID": "1", "filename": "1.jpg", "title": "One"}),
+                encoding="utf-8",
+            )
+
+            output = write_pixplot_metadata(collection)
+
+            with output.open(newline="", encoding="utf-8") as handle:
+                rows = list(csv.DictReader(handle))
+            self.assertEqual(["1.jpg"], [row["filename"] for row in rows])
+
     def test_patch_pixplot_toggles_injects_source_and_layer_controls(self):
         with tempfile.TemporaryDirectory() as tmp:
             atlas = Path(tmp) / "atlas"

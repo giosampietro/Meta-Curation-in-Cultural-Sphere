@@ -66,9 +66,13 @@ def _description(metadata: dict) -> str:
     return " | ".join(str(part) for part in parts if part)
 
 
-def _image_paths_for_object(collection_dir: Path, object_id: str) -> List[Path]:
+def _image_paths_for_object(collection_dir: Path, object_id: str, filename: str = "") -> List[Path]:
     images_dir = collection_dir / "images"
     valid_suffixes = {".jpg", ".jpeg", ".png", ".webp"}
+    if filename:
+        exact_path = images_dir / filename
+        if exact_path.is_file() and exact_path.suffix.lower() in valid_suffixes:
+            return [exact_path]
     paths = [
         path
         for path in images_dir.glob(f"{object_id}*")
@@ -95,8 +99,9 @@ def collect_image_records(collection_dir: Path) -> List[ImageRecord]:
         theme_layer = metadata.get("theme_layer") or ""
         search_term = metadata.get("search_term") or ""
         rights = metadata.get("rights") or metadata.get("license") or ""
+        filename = metadata.get("filename") or ""
 
-        for image_path in _image_paths_for_object(collection_dir, object_id):
+        for image_path in _image_paths_for_object(collection_dir, object_id, filename):
             records.append(
                 ImageRecord(
                     filename=image_path.name,
