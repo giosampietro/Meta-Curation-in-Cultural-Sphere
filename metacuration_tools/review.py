@@ -64,9 +64,12 @@ def _description(metadata: dict) -> str:
 
 def _image_paths_for_object(collection_dir: Path, object_id: str) -> List[Path]:
     images_dir = collection_dir / "images"
-    paths = []
-    for extension in ("*.jpg", "*.jpeg", "*.png", "*.webp"):
-        paths.extend(images_dir.glob(f"{object_id}*{extension[1:]}"))
+    valid_suffixes = {".jpg", ".jpeg", ".png", ".webp"}
+    paths = [
+        path
+        for path in images_dir.glob(f"{object_id}*")
+        if path.is_file() and path.suffix.lower() in valid_suffixes
+    ]
     return sorted(paths, key=lambda path: (path.stem != object_id, path.name))
 
 

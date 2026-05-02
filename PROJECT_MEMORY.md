@@ -44,6 +44,9 @@ The cultural heart is strong. The software is not yet a complete app.
 - Added a tested Met-only runner that wraps the original Met scraper.
 - Added a tested review/metadata generator.
 - Added a PixPlot bridge that prepares metadata and prints or runs the PixPlot command.
+- Downloaded a larger Met sample for the search term `cloud`.
+- Ran PixPlot successfully on that larger sample.
+- Added a local PixPlot preview server.
 
 ## Important Findings
 
@@ -57,7 +60,25 @@ The cultural heart is strong. The software is not yet a complete app.
 - `editorial-workflow-README.md` appears to end mid-thought.
 - The first Met sample found 278 object records, processed 2 object records, downloaded 8 image files, and produced 2 metadata files.
 - A `--max 2` Met run does not mean "download exactly 2 images." It means "process 2 object records," and each object may include additional images.
-- PixPlot is not installed locally. Current PixPlot installation is heavy and should be done deliberately in a separate environment where possible.
+- PixPlot is not installed directly on the computer. It has been run through Docker once, and the repo now has a Dockerfile for future isolated runs.
+- Docker generated the first full PixPlot atlas, but Docker Desktop's command socket became slow/unresponsive afterward when trying to build the reusable image. The Dockerfile is ready; the image build still needs a clean Docker retry.
+
+## Current Working Sample
+
+As of May 2, 2026, the first larger sample is working locally:
+
+- Collection: `data/samples/met-cloud-200`
+- Source: The Met API
+- Keyword: `cloud`
+- Object records: 56
+- Image files: 211
+- Review page: `data/samples/met-cloud-200/review.html`
+- PixPlot metadata: `data/samples/met-cloud-200/pixplot_metadata.csv`
+- PixPlot atlas: `data/pixplot/met-cloud-200`
+- Local preview command: `node scripts/serve_pixplot.mjs`
+- Local preview URL: `http://127.0.0.1:8771/data/pixplot/met-cloud-200/`
+
+The atlas has been browser-verified and opens into the WebGL map.
 
 ## Working Rule
 
@@ -80,6 +101,8 @@ The first evolution path is:
 - `docs/phase-2-runnable-workflow.md`
 - `docs/pixplot-integration-notes.md`
 - `data/samples/met-cloud-test/review.html`
+- `scripts/serve_pixplot.mjs`
+- `docker/pixplot.Dockerfile`
 
 ## Current Runnable Commands
 
@@ -93,4 +116,16 @@ PixPlot preparation dry run:
 
 ```bash
 python3 scripts/run_pixplot.py --collection data/samples/met-cloud-test
+```
+
+Preview the current PixPlot atlas:
+
+```bash
+node scripts/serve_pixplot.mjs
+```
+
+Then open:
+
+```text
+http://127.0.0.1:8771/data/pixplot/met-cloud-200/
 ```

@@ -30,6 +30,8 @@ By default it:
 
 This is intentional. PixPlot has heavy pinned dependencies, including TensorFlow, and should be installed deliberately.
 
+The repository also includes `docker/pixplot.Dockerfile`. This keeps the heavy PixPlot environment separate from the project files and from the main computer Python install.
+
 ## Current PixPlot Source Check
 
 The current PixPlot README says to install from the Yale DHLab GitHub archive:
@@ -67,4 +69,59 @@ For Met data:
 
 ## Practical Constraint
 
-The current sample has only 8 images. That is enough to test plumbing, not enough for meaningful clustering. For real cultural interpretation, use a larger mixed collection.
+The first larger working sample is `data/samples/met-cloud-200`.
+
+Current sample status:
+
+- 56 Met object records
+- 211 image files
+- 211 PixPlot metadata rows
+- source keyword: `cloud`
+- output target: `data/pixplot/met-cloud-200`
+
+This is enough to start playing with PixPlot, but it is still a narrow collection. For stronger cultural interpretation, the next samples should mix sources, themes, and your own image archive.
+
+## Docker PixPlot Workflow
+
+Use Docker for PixPlot because the dependency stack is heavy and fragile.
+
+Build the reusable local PixPlot image:
+
+```bash
+docker build -f docker/pixplot.Dockerfile -t metacuration-pixplot:local .
+```
+
+Run PixPlot against the 211-image sample:
+
+```bash
+docker run --rm -v "$PWD:/work" -w /work metacuration-pixplot:local python scripts/run_pixplot.py --collection data/samples/met-cloud-200 --execute
+```
+
+The important idea is simple: Docker holds PixPlot and TensorFlow; the Google Drive project folder holds the collection, metadata, and generated atlas.
+
+## Local Preview
+
+The generated PixPlot atlas should be served from the project root:
+
+```bash
+node scripts/serve_pixplot.mjs
+```
+
+Then open:
+
+```text
+http://127.0.0.1:8771/data/pixplot/met-cloud-200/
+```
+
+This matters because PixPlot writes project-relative paths in `data/manifest.json`. The preview server also sends `content-length` headers; without them, PixPlot's older loading screen can show `NaN%` and refuse to enter the map.
+
+## Current Verification
+
+Verified on May 2, 2026:
+
+- PixPlot generated the full atlas for `met-cloud-200`.
+- The browser preview opens to the WebGL map.
+- The atlas loads with no browser console errors in the local preview.
+- The map starts in UMAP layout with PixPlot's standard interactions.
+
+Docker note: the first one-off Docker run completed the atlas. Afterward Docker Desktop's command socket became slow/unresponsive for new `docker build` status calls, so the reusable Docker image is documented and ready but not yet confirmed as built locally.

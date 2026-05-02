@@ -19,6 +19,7 @@ class MetacurationToolsTest(unittest.TestCase):
 
         (images / "123.jpg").write_bytes(b"fake primary")
         (images / "123_additional_1.jpg").write_bytes(b"fake additional")
+        (images / "123_additional_2.JPG").write_bytes(b"fake uppercase extension")
         (metadata / "123.json").write_text(
             json.dumps(
                 {
@@ -58,8 +59,14 @@ class MetacurationToolsTest(unittest.TestCase):
 
             with output.open(newline="", encoding="utf-8") as handle:
                 rows = list(csv.DictReader(handle))
-            self.assertEqual(["123.jpg", "123_additional_1.jpg"], [row["filename"] for row in rows])
-            self.assertEqual(["European Paintings", "European Paintings"], [row["category"] for row in rows])
+            self.assertEqual(
+                ["123.jpg", "123_additional_1.jpg", "123_additional_2.JPG"],
+                [row["filename"] for row in rows],
+            )
+            self.assertEqual(
+                ["European Paintings", "European Paintings", "European Paintings"],
+                [row["category"] for row in rows],
+            )
             self.assertEqual("Clouds|Sky", rows[0]["tags"])
             self.assertEqual("Cloud Study | Example Artist | Oil on paper", rows[0]["description"])
             self.assertEqual("1824", rows[0]["year"])

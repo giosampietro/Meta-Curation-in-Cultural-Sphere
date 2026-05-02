@@ -66,3 +66,39 @@ The default parameters match the original project's intended meaning:
 - `min_cluster_size`: 3
 
 For small collections, `min_cluster_size` is lower than PixPlot's default so the tool can still reveal tentative hotspots.
+
+## Preferred PixPlot Setup: Docker
+
+Docker is currently the most stable way to run PixPlot on this project. It keeps the heavy machine-learning dependencies separate from the main computer setup.
+
+Build the local PixPlot image once:
+
+```bash
+docker build -f docker/pixplot.Dockerfile -t metacuration-pixplot:local .
+```
+
+Then run the current 211-image sample:
+
+```bash
+docker run --rm -v "$PWD:/work" -w /work metacuration-pixplot:local python scripts/run_pixplot.py --collection data/samples/met-cloud-200 --execute
+```
+
+The atlas is written to:
+
+```text
+data/pixplot/met-cloud-200
+```
+
+Preview it locally from the project root:
+
+```bash
+node scripts/serve_pixplot.mjs
+```
+
+Then open:
+
+```text
+http://127.0.0.1:8771/data/pixplot/met-cloud-200/
+```
+
+The preview server must serve from the project root because PixPlot writes project-relative paths into its manifest. It also sends `content-length` headers because PixPlot's older loader uses those headers to calculate progress.
