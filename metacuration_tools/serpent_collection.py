@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import csv
 import sys
+from collections import defaultdict, deque
 from pathlib import Path
 from typing import Iterable, List
 
@@ -64,6 +65,27 @@ def write_count_report(rows: List[dict], output_path: Path) -> Path:
     return output_path
 
 
+def select_balanced_records(records: Iterable[SourceImage], target_images: int) -> List[SourceImage]:
+    by_source = defaultdict(deque)
+    for record in records:
+        by_source[record.source].append(record)
+
+    selected: List[SourceImage] = []
+    sources = sorted(by_source)
+    while len(selected) < target_images and sources:
+        next_sources = []
+        for source in sources:
+            if len(selected) >= target_images:
+                break
+            queue = by_source[source]
+            if queue:
+                selected.append(queue.popleft())
+            if queue:
+                next_sources.append(source)
+        sources = next_sources
+    return selected
+
+
 def build_collection(
     output_dir: Path,
     records: Iterable[SourceImage],
@@ -72,7 +94,7 @@ def build_collection(
     output_dir = Path(output_dir)
     catalog = SerpentCatalog(output_dir / "catalog.sqlite")
     inserted = catalog.upsert_records(records)
-    selected = catalog.list_records()[:target_images]
+    selected = select_balanced_records(catalog.list_records(), target_images)
     written = []
     for record in selected:
         try:

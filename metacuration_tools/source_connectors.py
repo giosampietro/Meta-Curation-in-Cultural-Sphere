@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 import time
 from dataclasses import dataclass
 from typing import Iterable, List
@@ -226,12 +227,26 @@ class OpenSourceConnector:
         return records[:limit]
 
     def _search_vam(self, search_term: str, theme_layer: str, limit: int) -> List[SourceImage]:
-        data = self.get_json(
-            "https://api.vam.ac.uk/v2/objects/search",
-            {"q": search_term, "images_exist": 1, "page_size": min(limit, 100)},
-        )
-        records = [vam_record_to_source_image(record, search_term, theme_layer) for record in data.get("records", [])]
-        return [record for record in records if record.image_url][:limit]
+        records: List[SourceImage] = []
+        page_size = min(limit, 100)
+        page = 1
+        total_pages = 1
+        while len(records) < limit and page <= total_pages:
+            data = self.get_json(
+                "https://api.vam.ac.uk/v2/objects/search",
+                {"q": search_term, "images_exist": 1, "page_size": page_size, "page": page},
+            )
+            total = int(data.get("info", {}).get("record_count") or 0)
+            total_pages = max(1, math.ceil(total / page_size))
+            page_records = [
+                vam_record_to_source_image(record, search_term, theme_layer)
+                for record in data.get("records", [])
+            ]
+            records.extend(record for record in page_records if record.image_url)
+            if not data.get("records"):
+                break
+            page += 1
+        return records[:limit]
 
     def _search_aic(self, search_term: str, theme_layer: str, limit: int) -> List[SourceImage]:
         query = {
@@ -248,34 +263,64 @@ class OpenSourceConnector:
                 ]
             }
         }
-        params = {
-            "query": query,
-            "limit": min(limit, 100),
-            "fields": [
-                "id",
-                "title",
-                "image_id",
-                "is_public_domain",
-                "artist_display",
-                "date_display",
-                "department_title",
-                "thumbnail",
-            ],
-        }
-        url = "https://api.artic.edu/api/v1/artworks/search?params=" + quote(
-            json.dumps(params, separators=(",", ":"))
-        )
-        data = self.get_json(url)
-        records = [aic_record_to_source_image(record, search_term, theme_layer) for record in data.get("data", [])]
-        return [record for record in records if record.image_url][:limit]
+        records: List[SourceImage] = []
+        page = 1
+        total_pages = 1
+        page_size = min(limit, 100)
+        while len(records) < limit and page <= total_pages:
+            params = {
+                "query": query,
+                "limit": page_size,
+                "page": page,
+                "fields": [
+                    "id",
+                    "title",
+                    "image_id",
+                    "is_public_domain",
+                    "artist_display",
+                    "date_display",
+                    "department_title",
+                    "thumbnail",
+                ],
+            }
+            url = "https://api.artic.edu/api/v1/artworks/search?params=" + quote(
+                json.dumps(params, separators=(",", ":"))
+            )
+            data = self.get_json(url)
+            total_pages = int(data.get("pagination", {}).get("total_pages") or 1)
+            page_records = [
+                aic_record_to_source_image(record, search_term, theme_layer)
+                for record in data.get("data", [])
+            ]
+            records.extend(record for record in page_records if record.image_url)
+            if not data.get("data"):
+                break
+            page += 1
+        return records[:limit]
 
     def _search_cma(self, search_term: str, theme_layer: str, limit: int) -> List[SourceImage]:
-        data = self.get_json(
-            "https://openaccess-api.clevelandart.org/api/artworks/",
-            {"q": search_term, "has_image": 1, "limit": min(limit, 100)},
-        )
-        records = [cma_record_to_source_image(record, search_term, theme_layer) for record in data.get("data", [])]
-        return [record for record in records if record.image_url][:limit]
+        records: List[SourceImage] = []
+        page_size = min(limit, 100)
+        skip = 0
+        total = None
+        while len(records) < limit:
+            data = self.get_json(
+                "https://openaccess-api.clevelandart.org/api/artworks/",
+                {"q": search_term, "has_image": 1, "limit": page_size, "skip": skip},
+            )
+            if total is None:
+                total = int(data.get("info", {}).get("total") or 0)
+            page_records = [
+                cma_record_to_source_image(record, search_term, theme_layer)
+                for record in data.get("data", [])
+            ]
+            records.extend(record for record in page_records if record.image_url)
+            if not data.get("data"):
+                break
+            skip += len(data.get("data", []))
+            if skip >= total:
+                break
+        return records[:limit]
 
 
 def collect_open_records(

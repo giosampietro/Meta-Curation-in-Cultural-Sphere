@@ -9,7 +9,9 @@ from metacuration_tools.catalog import SerpentCatalog
 from metacuration_tools.pixplot_ui import patch_pixplot_toggles
 from metacuration_tools.pixplot_bridge import build_pixplot_command, default_pixplot_out_dir
 from metacuration_tools.review import write_html_review, write_pixplot_metadata
+from metacuration_tools.serpent_collection import select_balanced_records
 from metacuration_tools.source_connectors import (
+    OpenSourceConnector,
     aic_record_to_source_image,
     cma_record_to_source_image,
     met_object_to_source_images,
@@ -308,6 +310,74 @@ class MetacurationToolsTest(unittest.TestCase):
         )
         self.assertEqual("cma", cma.source)
         self.assertEqual("CC0", cma.license)
+
+    def test_vam_connector_paginates_to_requested_limit(self):
+        connector = OpenSourceConnector("vam", polite_delay=0)
+        calls = []
+
+        def fake_get_json(_url, params=None):
+            calls.append(params)
+            page = params["page"]
+            records = [
+                {
+                    "systemNumber": f"O{page}-{idx}",
+                    "objectType": "Snake",
+                    "_primaryImageId": f"IMG{page}-{idx}",
+                    "_images": {"_iiif_image_base_url": f"https://example.org/{page}/{idx}/"},
+                }
+                for idx in range(100)
+            ]
+            return {"records": records, "info": {"record_count": 250}}
+
+        object.__setattr__(connector, "get_json", fake_get_json)
+
+        records = connector.search("snake", "core", 150)
+
+        self.assertEqual(150, len(records))
+        self.assertEqual([1, 2], [call["page"] for call in calls])
+
+    def test_aic_connector_paginates_to_requested_limit(self):
+        connector = OpenSourceConnector("aic", polite_delay=0)
+        calls = []
+
+        def fake_get_json(url, params=None):
+            del params
+            calls.append(url)
+            page = 1 if '"page":1' in url else 2
+            return {
+                "pagination": {"total": 150, "total_pages": 2},
+                "data": [
+                    {
+                        "id": page * 1000 + idx,
+                        "title": "Serpent",
+                        "image_id": f"image-{page}-{idx}",
+                        "is_public_domain": True,
+                    }
+                    for idx in range(100)
+                ],
+            }
+
+        object.__setattr__(connector, "get_json", fake_get_json)
+
+        records = connector.search("serpent", "core", 150)
+
+        self.assertEqual(150, len(records))
+        self.assertEqual(2, len(calls))
+
+    def test_balanced_selection_round_robins_sources(self):
+        records = [
+            SourceImage(source="met", source_record_id=f"m{i}", image_url=f"https://example.org/m{i}.jpg")
+            for i in range(5)
+        ] + [
+            SourceImage(source="vam", source_record_id=f"v{i}", image_url=f"https://example.org/v{i}.jpg")
+            for i in range(2)
+        ] + [
+            SourceImage(source="aic", source_record_id="a1", image_url="https://example.org/a1.jpg")
+        ]
+
+        selected = select_balanced_records(records, 6)
+
+        self.assertEqual(["aic", "met", "vam", "met", "vam", "met"], [record.source for record in selected])
 
 
 if __name__ == "__main__":
