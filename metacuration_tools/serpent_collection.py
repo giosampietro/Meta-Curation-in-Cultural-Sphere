@@ -4,6 +4,7 @@ import argparse
 import csv
 import sys
 from collections import defaultdict, deque
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Iterable, List
 
@@ -90,19 +91,36 @@ def build_collection(
     output_dir: Path,
     records: Iterable[SourceImage],
     target_images: int,
+    download_workers: int = 1,
 ) -> dict:
     output_dir = Path(output_dir)
     catalog = SerpentCatalog(output_dir / "catalog.sqlite")
     inserted = catalog.upsert_records(records)
     selected = select_balanced_records(catalog.list_records(), target_images)
     written = []
-    for record in selected:
+
+    def download_record(record: SourceImage) -> str | None:
         try:
             filenames = write_collection_records(output_dir, [record], downloader=download_bytes)
             catalog.mark_downloaded(record, filenames[0])
-            written.extend(filenames)
+            return filenames[0]
         except Exception:
             catalog.mark_failed(record)
+            return None
+
+    if download_workers > 1:
+        with ThreadPoolExecutor(max_workers=download_workers) as executor:
+            futures = [executor.submit(download_record, record) for record in selected]
+            for future in as_completed(futures):
+                filename = future.result()
+                if filename:
+                    written.append(filename)
+    else:
+        for record in selected:
+            filename = download_record(record)
+            if filename:
+                written.append(filename)
+
     review = write_html_review(output_dir)
     pixplot_metadata = write_pixplot_metadata(output_dir)
     return {
@@ -123,6 +141,7 @@ def main(argv: List[str] | None = None) -> int:
     parser.add_argument("--core-limit-per-term", type=int, default=5)
     parser.add_argument("--expanded-limit-per-term", type=int, default=0)
     parser.add_argument("--target-images", type=int, default=100)
+    parser.add_argument("--download-workers", type=int, default=1)
     parser.add_argument("--count-only", action="store_true")
     args = parser.parse_args(argv)
 
@@ -147,7 +166,7 @@ def main(argv: List[str] | None = None) -> int:
         core_limit_per_term=args.core_limit_per_term,
         expanded_limit_per_term=args.expanded_limit_per_term,
     )
-    result = build_collection(output_dir, records, args.target_images)
+    result = build_collection(output_dir, records, args.target_images, download_workers=max(1, args.download_workers))
     for key, value in result.items():
         print(f"{key}: {value}")
     return 0 if result["downloaded_images"] else 1

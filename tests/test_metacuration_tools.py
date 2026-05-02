@@ -10,7 +10,8 @@ from metacuration_tools.catalog import SerpentCatalog
 from metacuration_tools.pixplot_ui import patch_pixplot_toggles
 from metacuration_tools.pixplot_bridge import build_pixplot_command, default_pixplot_out_dir
 from metacuration_tools.review import write_html_review, write_pixplot_metadata
-from metacuration_tools.serpent_collection import select_balanced_records
+from metacuration_tools import serpent_collection
+from metacuration_tools.serpent_collection import build_collection, select_balanced_records
 from metacuration_tools.source_connectors import (
     OpenSourceConnector,
     aic_record_to_source_image,
@@ -414,6 +415,46 @@ class MetacurationToolsTest(unittest.TestCase):
         selected = select_balanced_records(records, 6)
 
         self.assertEqual(["aic", "met", "vam", "met", "vam", "met"], [record.source for record in selected])
+
+    def test_build_collection_supports_parallel_download_workers(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            collection = Path(tmp) / "serpents-workers"
+            calls = []
+            original_download_bytes = serpent_collection.download_bytes
+
+            def fake_download_bytes(url):
+                calls.append(url)
+                return b"fake image"
+
+            serpent_collection.download_bytes = fake_download_bytes
+            try:
+                result = build_collection(
+                    collection,
+                    [
+                        SourceImage(
+                            source="aic",
+                            source_record_id="1",
+                            image_id="img1",
+                            title="Snake 1",
+                            image_url="https://example.org/1.jpg",
+                        ),
+                        SourceImage(
+                            source="cma",
+                            source_record_id="2",
+                            image_id="img2",
+                            title="Snake 2",
+                            image_url="https://example.org/2.jpg",
+                        ),
+                    ],
+                    target_images=2,
+                    download_workers=2,
+                )
+            finally:
+                serpent_collection.download_bytes = original_download_bytes
+
+            self.assertEqual(2, result["downloaded_images"])
+            self.assertEqual(2, len(calls))
+            self.assertEqual(2, len(list((collection / "images").iterdir())))
 
 
 if __name__ == "__main__":
