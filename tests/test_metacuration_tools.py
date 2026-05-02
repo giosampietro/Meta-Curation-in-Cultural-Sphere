@@ -5,8 +5,17 @@ import unittest
 from pathlib import Path
 
 from metacuration_tools.collect_met import build_met_scraper_command
+from metacuration_tools.catalog import SerpentCatalog
+from metacuration_tools.pixplot_ui import patch_pixplot_toggles
 from metacuration_tools.pixplot_bridge import build_pixplot_command, default_pixplot_out_dir
 from metacuration_tools.review import write_html_review, write_pixplot_metadata
+from metacuration_tools.source_connectors import (
+    aic_record_to_source_image,
+    cma_record_to_source_image,
+    met_object_to_source_images,
+    vam_record_to_source_image,
+)
+from metacuration_tools.sources import SourceImage, write_collection_records
 
 
 class MetacurationToolsTest(unittest.TestCase):
@@ -114,6 +123,191 @@ class MetacurationToolsTest(unittest.TestCase):
         self.assertEqual(command[0], "python3")
         self.assertEqual(command[1], "/repo/Methodology/01-data-collection /met_scraper.py")
         self.assertEqual(command[-6:], ["--terms", "cloud", "--max", "2", "--output", "data/samples/met-cloud-test"])
+
+    def test_source_image_writes_normalized_metadata_and_local_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            collection = Path(tmp) / "serpents-test"
+            record = SourceImage(
+                source="met",
+                source_record_id="123",
+                image_id="primary",
+                title="Bronze serpent",
+                creator="Unknown",
+                date="1550",
+                culture="Italian",
+                department="Decorative Arts",
+                object_url="https://example.org/object/123",
+                image_url="https://example.org/serpent.jpg",
+                rights="Public Domain",
+                license="CC0",
+                search_term="serpent",
+                theme_layer="core",
+                inclusion_reason="direct keyword: serpent",
+            )
+
+            written = write_collection_records(
+                collection,
+                [record],
+                downloader=lambda _url: b"fake image bytes",
+            )
+
+            self.assertEqual(1, len(written))
+            image_path = collection / "images" / written[0]
+            metadata_path = collection / "metadata" / f"{Path(written[0]).stem}.json"
+            self.assertTrue(image_path.exists())
+            metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+            self.assertEqual("met", metadata["source"])
+            self.assertEqual("core", metadata["theme_layer"])
+            self.assertEqual("serpent", metadata["search_term"])
+            self.assertEqual("https://example.org/object/123", metadata["objectURL"])
+
+    def test_serpent_catalog_dedupes_same_source_image_url(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            catalog = SerpentCatalog(Path(tmp) / "catalog.sqlite")
+            first = SourceImage(
+                source="met",
+                source_record_id="123",
+                image_id="primary",
+                title="Snake",
+                image_url="https://example.org/snake.jpg",
+                search_term="snake",
+                theme_layer="core",
+                inclusion_reason="direct keyword: snake",
+            )
+            duplicate = SourceImage(
+                source="met",
+                source_record_id="123",
+                image_id="primary",
+                title="Snake",
+                image_url="https://example.org/snake.jpg",
+                search_term="snakes",
+                theme_layer="core",
+                inclusion_reason="direct keyword: snakes",
+            )
+
+            self.assertEqual(1, catalog.upsert_records([first]))
+            self.assertEqual(0, catalog.upsert_records([duplicate]))
+            rows = catalog.list_records()
+            self.assertEqual(1, len(rows))
+            self.assertEqual("snake", rows[0].search_term)
+
+    def test_pixplot_metadata_includes_source_layer_and_search_term(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            collection = Path(tmp) / "serpents-test"
+            write_collection_records(
+                collection,
+                [
+                    SourceImage(
+                        source="vam",
+                        source_record_id="O1",
+                        image_id="img",
+                        title="Snake ornament",
+                        image_url="https://example.org/snake.jpg",
+                        search_term="snake",
+                        theme_layer="core",
+                        inclusion_reason="direct keyword: snake",
+                    )
+                ],
+                downloader=lambda _url: b"fake",
+            )
+
+            output = write_pixplot_metadata(collection)
+
+            with output.open(newline="", encoding="utf-8") as handle:
+                rows = list(csv.DictReader(handle))
+            self.assertEqual("vam", rows[0]["source"])
+            self.assertEqual("core", rows[0]["theme_layer"])
+            self.assertEqual("snake", rows[0]["search_term"])
+
+    def test_patch_pixplot_toggles_injects_source_and_layer_controls(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            atlas = Path(tmp) / "atlas"
+            assets = atlas / "assets" / "js"
+            assets.mkdir(parents=True)
+            (atlas / "index.html").write_text(
+                "<html><body><script src='assets/js/tsne.js'></script></body></html>",
+                encoding="utf-8",
+            )
+
+            patch_pixplot_toggles(atlas)
+
+            index = (atlas / "index.html").read_text(encoding="utf-8")
+            script = (assets / "metacuration-toggles.js").read_text(encoding="utf-8")
+            self.assertIn("metacuration-toggles.js", index)
+            self.assertIn("theme_layer", script)
+            self.assertIn("source", script)
+            self.assertIn("resetGroupIfEmpty", script)
+
+    def test_connectors_normalize_open_source_records(self):
+        met_images = met_object_to_source_images(
+            {
+                "objectID": 10,
+                "title": "Serpent Vessel",
+                "artistDisplayName": "Unknown",
+                "objectDate": "1700",
+                "culture": "Italian",
+                "department": "Decorative Arts",
+                "objectURL": "https://met.example/10",
+                "primaryImage": "https://images.example/met/10.jpg",
+                "additionalImages": ["https://images.example/met/10-2.jpg"],
+                "isPublicDomain": True,
+            },
+            search_term="serpent",
+            theme_layer="core",
+        )
+        self.assertEqual(["primary", "additional_1"], [image.image_id for image in met_images])
+        self.assertEqual("met", met_images[0].source)
+        self.assertEqual("Public Domain", met_images[0].rights)
+
+        vam = vam_record_to_source_image(
+            {
+                "systemNumber": "O355355",
+                "objectType": "Snake",
+                "_primaryMaker": {"name": "Unknown"},
+                "_primaryDate": "1916-1919",
+                "_primaryPlace": "Turkey",
+                "_primaryImageId": "2019ME9071",
+                "_images": {"_iiif_image_base_url": "https://framemark.vam.ac.uk/collections/2019ME9071/"},
+            },
+            search_term="snake",
+            theme_layer="core",
+        )
+        self.assertEqual("vam", vam.source)
+        self.assertIn("!1200,1200", vam.image_url)
+
+        aic = aic_record_to_source_image(
+            {
+                "id": 20579,
+                "title": "Hercules and the Lernaean Hydra",
+                "artist_display": "Gustave Moreau",
+                "date_display": "1875-76",
+                "department_title": "Painting and Sculpture of Europe",
+                "image_id": "2ae64c8a",
+                "is_public_domain": True,
+            },
+            search_term="hydra",
+            theme_layer="expanded",
+        )
+        self.assertEqual("aic", aic.source)
+        self.assertEqual("expanded", aic.theme_layer)
+        self.assertIn("lakeimagesweb.artic.edu/iiif/2/2ae64c8a", aic.image_url)
+
+        cma = cma_record_to_source_image(
+            {
+                "id": 137667,
+                "title": "The prince enters the service of a snake",
+                "creation_date": "c. 1560",
+                "culture": ["Mughal India"],
+                "department": "Indian and Southeast Asian Art",
+                "url": "https://www.clevelandart.org/art/1962.279.245.b",
+                "images": {"web": {"url": "https://images.clevelandart.org/1962.jpg"}},
+                "share_license_status": "CC0",
+            },
+            search_term="snake",
+            theme_layer="core",
+        )
+        self.assertEqual("cma", cma.source)
+        self.assertEqual("CC0", cma.license)
 
 
 if __name__ == "__main__":

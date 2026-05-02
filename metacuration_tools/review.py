@@ -22,6 +22,10 @@ class ImageRecord:
     tags: str
     description: str
     permalink: str
+    source: str
+    theme_layer: str
+    search_term: str
+    rights: str
 
 
 def _metadata_files(collection_dir: Path) -> Iterable[Path]:
@@ -85,8 +89,12 @@ def collect_image_records(collection_dir: Path) -> List[ImageRecord]:
         category = metadata.get("department") or metadata.get("source") or "Metropolitan Museum of Art"
         tags = _tags(metadata)
         description = _description(metadata)
-        permalink = metadata.get("objectURL") or metadata.get("source") or ""
+        permalink = metadata.get("objectURL") or metadata.get("permalink") or ""
         year = _year(metadata)
+        source = metadata.get("source") or "met"
+        theme_layer = metadata.get("theme_layer") or ""
+        search_term = metadata.get("search_term") or ""
+        rights = metadata.get("rights") or metadata.get("license") or ""
 
         for image_path in _image_paths_for_object(collection_dir, object_id):
             records.append(
@@ -102,6 +110,10 @@ def collect_image_records(collection_dir: Path) -> List[ImageRecord]:
                     tags=tags,
                     description=description,
                     permalink=str(permalink),
+                    source=str(source),
+                    theme_layer=str(theme_layer),
+                    search_term=str(search_term),
+                    rights=str(rights),
                 )
             )
     return records
@@ -116,7 +128,18 @@ def write_pixplot_metadata(collection_dir: Path, output_path: Path | None = None
     with output_path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(
             handle,
-            fieldnames=["filename", "category", "tags", "description", "permalink", "year"],
+            fieldnames=[
+                "filename",
+                "category",
+                "tags",
+                "description",
+                "permalink",
+                "year",
+                "source",
+                "theme_layer",
+                "search_term",
+                "rights",
+            ],
         )
         writer.writeheader()
         for record in records:
@@ -128,6 +151,10 @@ def write_pixplot_metadata(collection_dir: Path, output_path: Path | None = None
                     "description": record.description,
                     "permalink": record.permalink,
                     "year": record.year,
+                    "source": record.source,
+                    "theme_layer": record.theme_layer,
+                    "search_term": record.search_term,
+                    "rights": record.rights,
                 }
             )
     return output_path
@@ -163,6 +190,7 @@ def write_html_review(collection_dir: Path, output_path: Path | None = None) -> 
           <div>
             <h2>{html.escape(first.title)}</h2>
             <p class="meta">{html.escape(first.creator)}{', ' if first.creator and first.date else ''}{html.escape(first.date)}. Object {html.escape(first.object_id)}.</p>
+            <p class="meta">Source: {html.escape(first.source)}{f' | Layer: {html.escape(first.theme_layer)}' if first.theme_layer else ''}{f' | Term: {html.escape(first.search_term)}' if first.search_term else ''}</p>
           </div>
           {link}
         </div>

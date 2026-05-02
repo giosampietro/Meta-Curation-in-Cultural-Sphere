@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import List
 
 from .review import write_pixplot_metadata
+from .pixplot_ui import patch_pixplot_toggles
 
 
 def default_pixplot_out_dir(collection: Path) -> Path:
@@ -61,6 +62,7 @@ def main(argv: List[str] | None = None) -> int:
     parser.add_argument("--min-cluster-size", type=int, default=3)
     parser.add_argument("--cell-size", type=int, default=32)
     parser.add_argument("--execute", action="store_true", help="Run PixPlot if it is installed.")
+    parser.add_argument("--no-toggle-patch", action="store_true", help="Do not add Meta-Curation source/layer toggles after PixPlot runs.")
     args = parser.parse_args(argv)
 
     collection = Path(args.collection)
@@ -91,6 +93,9 @@ def main(argv: List[str] | None = None) -> int:
         return 2
 
     subprocess.run(command, check=True)
+    if not args.no_toggle_patch:
+        patch_pixplot_toggles(out_dir)
+        print("Patched PixPlot toggles:", out_dir)
     return 0
 
 

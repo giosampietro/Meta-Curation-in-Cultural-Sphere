@@ -80,6 +80,24 @@ As of May 2, 2026, the first larger sample is working locally:
 
 The atlas has been browser-verified and opens into the WebGL map.
 
+## Serpent Atlas Status
+
+As of May 2, 2026, the open-first serpent workflow is implemented for:
+
+- Met
+- V&A
+- Art Institute of Chicago
+- Cleveland Museum of Art
+
+Current verified runs:
+
+- `data/samples/serpents-open-two-layer-small`: 40 images, core + expanded layers
+- `data/samples/serpents-open-core-300`: 300 images, core layer, about 204 MB
+
+The generated PixPlot metadata includes `source`, `theme_layer`, `search_term`, and `rights`.
+
+PixPlot toggle patching is implemented in code, but the 300-image PixPlot atlas has not been executed yet because Docker Desktop's command socket is currently hanging. The dry-run PixPlot command is ready in `docs/serpent-atlas-workflow.md`.
+
 ## Working Rule
 
 Preserve the original project while we understand it. Any future repair should be small, documented, and reversible.
@@ -103,6 +121,8 @@ The first evolution path is:
 - `data/samples/met-cloud-test/review.html`
 - `scripts/serve_pixplot.mjs`
 - `docker/pixplot.Dockerfile`
+- `scripts/collect_serpents.py`
+- `docs/serpent-atlas-workflow.md`
 
 ## Current Runnable Commands
 
